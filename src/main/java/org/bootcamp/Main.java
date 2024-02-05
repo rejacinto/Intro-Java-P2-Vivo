@@ -1,9 +1,7 @@
 package org.bootcamp;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     final static Double AMOUNT_NO_AVAILABE_FOR_AGE = -1.0;
@@ -13,10 +11,7 @@ public class Main {
         Category mediumCircuit = new Category("Circuito medio", "Menores de 18 años $2000. Mayores de 18 años $2300.", 2000.0, 2300.0);
         Category advancedCircuit = new Category("Circuito avanzado", "No se permite inscripciones a menores de 18 años. Mayores de 18 años $2800.", AMOUNT_NO_AVAILABE_FOR_AGE, 2800.0);
 
-        Map<Integer, Category> categories = new HashMap<>();
-        categories.put(smallCircuit.id, smallCircuit);
-        categories.put(mediumCircuit.id, mediumCircuit);
-        categories.put(advancedCircuit.id, advancedCircuit);
+        List<Category> categories = new ArrayList<>(Arrays.asList(smallCircuit, mediumCircuit, advancedCircuit));
 
         Competitor competitor1 = new Competitor("12345678", "Fulano", "Sosa", 15, "2284219331", "2284453886", "0-");
         Competitor competitor2 = new Competitor("41211589", "Renzo", "Jacinto", 25, "2284219331", "2284453886", "0-");
@@ -25,92 +20,70 @@ public class Main {
         Competitor competitor5 = new Competitor("12345678", "Sultano", "Mango", 25, "2284219331", "2284453886", "0-");
         Competitor competitor6 = new Competitor("12345678", "Meleno", "Buto", 25, "2284219331", "2284453886", "0-");
 
-        Map<Integer, Competitor> competitors = new HashMap<>();
-        competitors.put(competitor1.numberOfCompetitor, competitor1);
-        competitors.put(competitor2.numberOfCompetitor, competitor2);
-        competitors.put(competitor3.numberOfCompetitor, competitor3);
-        competitors.put(competitor4.numberOfCompetitor, competitor4);
-        competitors.put(competitor5.numberOfCompetitor, competitor5);
-        competitors.put(competitor6.numberOfCompetitor, competitor6);
-
-        Map<Integer, List<Integer>> competitorsOfCategories = new HashMap<>();
-        for (Category category : categories.values()) {
-            competitorsOfCategories.put(category.id, new ArrayList<>());
-        }
+        List<Competitor> competitors = new ArrayList<>(Arrays.asList(competitor1, competitor2, competitor3, competitor4, competitor5, competitor6));
 
         try {
-            suscribe(competitor1, smallCircuit, competitorsOfCategories);
-            suscribe(competitor2, smallCircuit, competitorsOfCategories);
-            suscribe(competitor3, mediumCircuit, competitorsOfCategories);
-            suscribe(competitor4, mediumCircuit, competitorsOfCategories);
-            suscribe(competitor5, advancedCircuit, competitorsOfCategories);
-            suscribe(competitor6, advancedCircuit, competitorsOfCategories);
+            competitor1.suscribe(smallCircuit);
+            competitor2.suscribe(smallCircuit);
+            competitor3.suscribe(mediumCircuit);
+            competitor4.suscribe(mediumCircuit);
+            competitor5.suscribe(advancedCircuit);
+            competitor6.suscribe(advancedCircuit);
 
-            showCompetitorsPerCategory(categories, competitors, competitorsOfCategories);
-            unsuscribeCompetitorAndShowCategory(competitor1, competitors, competitorsOfCategories);
-            showPerCategoryAndTotalAmount(competitorsOfCategories, categories, competitors);
+            showCompetitorsPerCategory(categories, competitors);
+            unsuscribeCompetitorAndShowCategory(competitor1, competitors);
+            showPerCategoryAndTotalAmount(categories, competitors);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-    private static void suscribe(Competitor competitor, Category category, Map<Integer, List<Integer>> competitorsOfCategories) throws Exception {
-            competitor.suscribe(category);
-            List<Integer> competitors = competitorsOfCategories.get(category.id);
-            if (!competitors.contains(competitor.numberOfCompetitor)) {
-                competitors.add(competitor.numberOfCompetitor);
-                competitorsOfCategories.put(category.id, competitors);
-            }
-    }
-
-    private static void showCompetitorsPerCategory(Map<Integer, Category> categories, Map<Integer, Competitor> competitors, Map<Integer, List<Integer>> competitorsOfCategories) {
-        for (int categoryId : competitorsOfCategories.keySet()) {
-            Category category = categories.get(categoryId);
-            System.out.println("Inscriptos a la categoría " + category.name + ":");
-            for (int competitorId : competitorsOfCategories.get(categoryId)) {
-                showCompetitorOfCategory(competitorId, competitors, category);
-            }
+    private static void showCompetitorsPerCategory(List<Category> categories, List<Competitor> competitors) {
+        for (Category category : categories) {
+            System.out.println("Inscriptos a la categoría " + category.getName() + ":");
+            competitors.stream()
+                    .filter(c -> c.getInscription() != null
+                            && c.getInscription().getCategory().getId().equals(category.getId()))
+                    .forEach(c -> showCompetitorOfCategory(c.getNumberOfCompetitor(), competitors, category));
         }
     }
 
-    private static void showCompetitorOfCategory(int competitorId, Map<Integer, Competitor> competitors, Category category) {
-        Competitor competitor = competitors.get(competitorId);
-        if (competitor.inscription == null || category.id != competitor.inscription.category.id) return;
-        Inscription inscription = competitor.inscription;
-        System.out.println("Con número de inscripción " + inscription.numberOfInscription + ": " + competitor.firstName + " " + competitor.lastName);
+    private static void showCompetitorOfCategory(int competitorId, List<Competitor> competitors, Category category) {
+        Competitor competitor = competitors.stream().filter(c -> c.getNumberOfCompetitor() == competitorId).collect(Collectors.toList()).get(0);
+        if (competitor == null || competitor.getInscription() == null
+                || !category.getId().equals(competitor.getInscription().getCategory().getId())) return;
+        Inscription inscription = competitor.getInscription();
+        System.out.println("Con número de inscripción " + inscription.getNumberOfInscription() + ": " + competitor.getFirstName() + " " + competitor.getLastName());
     }
 
-    private static void unsuscribeCompetitorAndShowCategory(Competitor competitor, Map<Integer, Competitor> competitors, Map<Integer, List<Integer>> competitorsOfCategories) {
-        Inscription inscription = competitor.inscription;
+    private static void unsuscribeCompetitorAndShowCategory(Competitor competitor, List<Competitor> competitors) {
+        Inscription inscription = competitor.getInscription();
         if (inscription == null) {
-            System.out.println("Competitor was not suscribed to any category");
+            System.out.println("El participante no se inscribió a ninguna categoría");
             return;
         }
-        Category category = inscription.category;
+        Category category = inscription.getCategory();
         competitor.unsuscribe();
-        List<Integer> competitorsOfCategory = competitorsOfCategories.get(category.id);
-        if (competitorsOfCategory.contains(competitor.numberOfCompetitor)) {
-            competitorsOfCategory.remove(competitor.numberOfCompetitor);
-            competitorsOfCategories.put(category.id, competitorsOfCategory);
-        }
-        System.out.println("Inscriptos a la categoría " + category.name + " luego de desinscribir a " + competitor.firstName + " " + competitor.lastName + ":");
-        for (int competitorId : competitorsOfCategories.get(category.id)) {
-            showCompetitorOfCategory(competitorId, competitors, category);
-        }
+        System.out.println("Inscriptos a la categoría " + category.getName() + " luego de desinscribir a " + competitor.getFirstName() + " " + competitor.getLastName() + ":");
+        competitors.stream()
+                .filter(c -> c.getInscription() != null
+                        && c.getInscription().getCategory().getId().equals(category.getId()))
+                .forEach(c -> showCompetitorOfCategory(c.getNumberOfCompetitor(), competitors, category));
     }
 
-    private static void showPerCategoryAndTotalAmount(Map<Integer, List<Integer>> competitorsOfCategories, Map<Integer, Category> categories, Map<Integer, Competitor> competitors) {
+    private static void showPerCategoryAndTotalAmount(List<Category> categories, List<Competitor> competitors) {
         double total = 0;
-        for (int categoryId : competitorsOfCategories.keySet()) {
-            Category category = categories.get(categoryId);
-            List<Integer> competitorsIdsOfCategory = competitorsOfCategories.get(categoryId);
+        for (Category category : categories) {
             double sumOfAmounts = 0;
-            for (int competitorId : competitorsIdsOfCategory) {
-                double amountOfCompetitor = competitors.get(competitorId).inscription.amount;
+            List<Competitor> competitorsOfCategory = competitors.stream()
+                    .filter(c -> c.getInscription() != null
+                            && c.getInscription().getCategory().getId().equals(category.getId())).collect(Collectors.toList());
+            for (Competitor competitor : competitorsOfCategory) {
+                double amountOfCompetitor = competitor.getInscription().getAmount();
                 sumOfAmounts += amountOfCompetitor;
             }
             total += sumOfAmounts;
-            System.out.println("La suma total para la categoría " + category.name + " es de: " + sumOfAmounts);
+            System.out.println("La suma total para la categoría " + category.getName() + " es de: " + sumOfAmounts);
         }
         System.out.println("La suma total de todas las categorías fue de: " + total);
     }
